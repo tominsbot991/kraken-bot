@@ -22,8 +22,9 @@ async function refreshAll(opts = {}) {
   // skipTrades: used at startup, where trade history is fetched separately in
   // the background. On a cold/empty cache fetchNewTrades() backfills the entire
   // history (rate-limited, minutes) and would otherwise block startup.
-  if (!opts.skipTrades) await history.fetchNewTrades();
+  if (process.env.PAPER_TRADING !== 'true' && !opts.skipTrades) await history.fetchNewTrades();
 
+  if (process.env.PAPER_TRADING === 'true') return;
   const lastLedgerFetch = state._lastLedgerFetch || 0;
   if (Date.now() - lastLedgerFetch > 30 * 60 * 1000) {
     await balance.fetchLedgers(7);
