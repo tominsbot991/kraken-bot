@@ -100,8 +100,9 @@ function reservedVolume(asset) {
   return Object.values(book.orders).filter(o => o.asset === asset && o.type === 'sell').reduce((s, o) => s + o.volume, 0);
 }
 function recordTrade(pair, type, volume, price) {
-  const cost = volume * price;
-  const fee = cost * FEE_RATE;
+  const gross = volume * price;
+  const fee = gross * FEE_RATE;
+  const cost = type === 'buy' ? gross + fee : gross - fee;
   const id = 'PAPER-' + book.nextId++;
   const trade = { pair, type, vol: String(volume), price: String(price), cost: String(cost), fee: String(fee), time: Date.now() / 1000, ordertxid: id };
   book.trades[id] = trade;
@@ -162,7 +163,7 @@ function addPending(pair, type, ordertype, volume, price) {
   return { success: true, paper: true, order: { txid: [id], descr: { order: 'paper ' + ordertype + ' ' + type } } };
 }
 function limitBuy(pair, amountEUR, price) {
-  const volume = Number((amountEUR / price).toFixed(state.pairs[pair]?.lot_decimals || 8));
+  const volume = Number((amountEUR / (price * (1 + FEE_RATE))).toFixed(state.pairs[pair]?.lot_decimals || 8));
   return addPending(pair, 'buy', 'limit', volume, price);
 }
 function limitSell(pair, volume, price) { return addPending(pair, 'sell', 'limit', volume, price); }
