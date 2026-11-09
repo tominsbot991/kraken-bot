@@ -6,6 +6,8 @@
  */
 
 require('dotenv').config();
+// Fail closed: Paper Trading is the default unless explicitly disabled.
+if (process.env.PAPER_TRADING == null) process.env.PAPER_TRADING = 'true';
 
 const { state, log, loadAllState, recordBalanceSnapshot } = require('./src/state');
 const kraken = require('./src/kraken');
