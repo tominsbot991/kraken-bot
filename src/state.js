@@ -66,12 +66,12 @@ const state = {
 // ============================================
 
 const FILES = {
-  tradeHistory: path.join(DATA_DIR, 'full_trade_history.json'),
-  analytics: path.join(DATA_DIR, 'trade_analytics.json'),
+  tradeHistory: path.join(DATA_DIR, process.env.PAPER_TRADING === 'true' ? 'paper_trade_history.json' : 'full_trade_history.json'),
+  analytics: path.join(DATA_DIR, process.env.PAPER_TRADING === 'true' ? 'paper_trade_analytics.json' : 'trade_analytics.json'),
   llmAnalysis: path.join(DATA_DIR, 'llm_analysis.json'),
   llmHistory: path.join(DATA_DIR, 'llm_history.json'),
-  aiExecutions: path.join(DATA_DIR, 'ai_executions.json'),
-  balanceHistory: path.join(DATA_DIR, 'balance_history.json'),
+  aiExecutions: path.join(DATA_DIR, process.env.PAPER_TRADING === 'true' ? 'paper_ai_executions.json' : 'ai_executions.json'),
+  balanceHistory: path.join(DATA_DIR, process.env.PAPER_TRADING === 'true' ? 'paper_balance_history.json' : 'balance_history.json'),
   insights: path.join(DATA_DIR, 'insights.json')
 };
 
