@@ -119,43 +119,46 @@ function recordTrade(pair, type, volume, price) {
 }
 function buy(pair, amountEUR, priceOverride = null) {
   init();
-  const { asset } = getPairInfo(pair);
-  const price = priceOverride || marketPrice(pair, 'buy');
+  const pairData = getPairInfo(pair);
+  const { asset, internal } = pairData;
+  const price = priceOverride || marketPrice(internal, 'buy');
   if (!(price > 0)) return { success: false, error: 'no_price_data' };
   if (!(amountEUR > 0) || amountEUR + reservedCash() > book.cashEUR + 1e-8) return { success: false, error: 'insufficient_paper_cash' };
   const gross = amountEUR / (1 + FEE_RATE);
   const fee = amountEUR - gross;
   const volume = gross / price;
-  const min = Number(getPairInfo(pair).info.ordermin || 0);
+  const min = Number(pairData.info.ordermin || 0);
   if (volume < min) return { success: false, error: 'below_minimum_order_volume' };
   book.cashEUR -= amountEUR;
   book.holdings[asset] = (book.holdings[asset] || 0) + volume;
-  const trade = recordTrade(pair, 'buy', volume, price);
+  const trade = recordTrade(internal, 'buy', volume, price);
   refreshPortfolio();
   log(`[PAPER] BUY ${asset}: ${volume.toFixed(8)} @ ${price} EUR; fee ${fee.toFixed(4)} EUR`);
   return { success: true, paper: true, order: { descr: { order: 'paper market buy' } }, trade };
 }
 function sell(pair, volume, priceOverride = null) {
   init();
-  const { asset } = getPairInfo(pair);
+  const pairData = getPairInfo(pair);
+  const { asset, internal } = pairData;
   const available = (book.holdings[asset] || 0) - reservedVolume(asset);
   if (!(volume > 0) || volume > available + 1e-10) return { success: false, error: 'insufficient_paper_asset' };
-  const price = priceOverride || marketPrice(pair, 'sell');
+  const price = priceOverride || marketPrice(internal, 'sell');
   if (!(price > 0)) return { success: false, error: 'no_price_data' };
   const gross = volume * price;
   const fee = gross * FEE_RATE;
   book.holdings[asset] -= volume;
   book.cashEUR += gross - fee;
-  const trade = recordTrade(pair, 'sell', volume, price);
+  const trade = recordTrade(internal, 'sell', volume, price);
   refreshPortfolio();
   log(`[PAPER] SELL ${asset}: ${volume.toFixed(8)} @ ${price} EUR; fee ${fee.toFixed(4)} EUR`);
   return { success: true, paper: true, order: { descr: { order: 'paper sell' } }, trade };
 }
 function addPending(pair, type, ordertype, volume, price) {
   init();
-  const { asset } = getPairInfo(pair);
+  const pairData = getPairInfo(pair);
+  const { asset, internal } = pairData;
   if (!(volume > 0) || !(price > 0)) return { success: false, error: 'invalid_order_parameters' };
-  const minimum = Number(getPairInfo(pair).info.ordermin || 0);
+  const minimum = Number(pairData.info.ordermin || 0);
   if (volume < minimum) return { success: false, error: 'below_minimum_order_volume' };
   if (type === 'sell' && volume > (book.holdings[asset] || 0) - reservedVolume(asset) + 1e-10) {
     return { success: false, error: 'insufficient_paper_asset' };
@@ -164,7 +167,7 @@ function addPending(pair, type, ordertype, volume, price) {
     return { success: false, error: 'insufficient_paper_cash' };
   }
   const id = 'PAPER-ORDER-' + book.nextId++;
-  book.orders[id] = { id, pair: getPairInfo(pair).internal, asset, type, ordertype, volume, price, createdAt: Date.now() };
+  book.orders[id] = { id, pair: internal, asset, type, ordertype, volume, price, createdAt: Date.now() };
   persist();
   refreshPortfolio();
   log(`[PAPER] Open ${ordertype} ${type} ${asset}: ${volume} @ ${price}`);
@@ -172,7 +175,8 @@ function addPending(pair, type, ordertype, volume, price) {
   return { success: true, paper: true, order: { txid: [id], descr: { order: 'paper ' + ordertype + ' ' + type } } };
 }
 function limitBuy(pair, amountEUR, price) {
-  const volume = Number((amountEUR / (price * (1 + FEE_RATE))).toFixed(state.pairs[pair]?.lot_decimals || 8));
+  const internal = state.pairAliases[pair] || pair;
+  const volume = Number((amountEUR / (price * (1 + FEE_RATE))).toFixed(state.pairs[internal]?.lot_decimals || 8));
   return addPending(pair, 'buy', 'limit', volume, price);
 }
 function limitSell(pair, volume, price) { return addPending(pair, 'sell', 'limit', volume, price); }
