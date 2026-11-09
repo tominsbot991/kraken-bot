@@ -304,6 +304,7 @@ function buildPrompt(ctx) {
   const strategyText = loadedStrategy || 'No strategy loaded';
   
   const jsonData = JSON.stringify({
+    trading_mode: process.env.PAPER_TRADING === 'true' ? 'PAPER — simulated orders only, no real funds' : 'LIVE',
     time_utc: ctx.sessionInfo.utcTime,
     market: {
       btc_dominance_pct: ctx.globalMarket?.btcDominance,
