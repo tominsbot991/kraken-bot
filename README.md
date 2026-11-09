@@ -54,6 +54,10 @@ An AI-powered cryptocurrency trading bot for [Kraken](https://www.kraken.com) ex
 
 4. Open the dashboard at `http://localhost:8000`
 
+## 24/7 VPS deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the Ubuntu/Debian systemd setup, localhost-only dashboard, firewall rules, and SSH-tunnel access. The supplied service forces Paper Trading mode; it is not a live-trading service.
+
 ## Paper Trading (safe default)
 
 Paper Trading is enabled by default. It uses public Kraken ticker data but stores a separate virtual wallet in `data/paper_trading.json`. Market buys and sells are simulated with configurable fees and slippage; limit and stop-loss orders remain pending until market prices reach their trigger. No Kraken private balance, trade-history, or order endpoint is used in this mode. The dashboard reports `PAPER` mode.
