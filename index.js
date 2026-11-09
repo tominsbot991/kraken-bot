@@ -18,8 +18,9 @@ const { manageTrailingStops } = require('./src/trailing_stops');
 // ============================================
 
 const config = {
-  krakenKey: process.env.KRAKEN_KEY,
-  krakenSecret: process.env.KRAKEN_PASSCODE,
+  paperTrading: process.env.PAPER_TRADING === 'true',
+  krakenKey: process.env.KRAKEN_KEY || '',
+  krakenSecret: process.env.KRAKEN_PASSCODE || '',
   llmProvider: process.env.LLM_PROVIDER || 'ollama',
   openrouterKey: process.env.OPENROUTER_API_KEY,
   opencodeKey: process.env.OPENCODE_API_KEY,
@@ -54,7 +55,7 @@ if (config.llmModel.startsWith('opencode/')) {
 // VALIDATION
 // ============================================
 
-if (!config.krakenKey || !config.krakenSecret) {
+if (!config.paperTrading && (!config.krakenKey || !config.krakenSecret)) {
   console.error('ERROR: Missing KRAKEN_KEY or KRAKEN_PASSCODE in .env');
   process.exit(1);
 }
@@ -78,7 +79,14 @@ async function init() {
   // Load persisted state
   loadAllState();
   
-  // Initialize Kraken API
+  // Paper mode uses a separate virtual ledger and does not require private Kraken credentials.
+  if (config.paperTrading) {
+    require('./src/kraken/paper').init();
+    state._tradeHistoryReady = true;
+    log('[INIT] PAPER TRADING MODE: real Kraken order endpoints are bypassed.');
+  }
+  
+  // Initialize Kraken API for public market data (and private data only in live mode).
   kraken.init(config.krakenKey, config.krakenSecret, config.countryCode);
   
   // Initialize AI module
@@ -126,14 +134,19 @@ async function init() {
     await ai.initContext();
   }
 
-  // Fetch trade history in background (can take a while)
-  log('[INIT] Fetching trade history (background)...');
-  state._tradeHistoryReady = false;
-  kraken.fetchAllTradeHistory().then(() => {
-    log('[INIT] Trade history loaded');
+  // Fetch real account history only in live mode. Paper mode keeps a separate simulated ledger.
+  if (!config.paperTrading) {
+    log('[INIT] Fetching trade history (background)...');
+    state._tradeHistoryReady = false;
+    kraken.fetchAllTradeHistory().then(() => {
+      log('[INIT] Trade history loaded');
+      state._tradeHistoryReady = true;
+      server.broadcast('state', server.getFullState());
+    });
+  } else {
+    kraken.calculateTradeAnalytics();
     state._tradeHistoryReady = true;
-    server.broadcast('state', server.getFullState());
-  });
+  }
   
   log('[INIT] Bot ready!');
   log(`[INIT] Balance: ${state.tradeBalance.toFixed(2)} EUR`);
@@ -165,7 +178,7 @@ function startScheduledTasks() {
   // Sync new trades every 5 minutes (rate-limited, uses cached data)
   const tradesInterval = setInterval(async () => {
     try {
-      await kraken.fetchNewTrades();
+      if (!config.paperTrading) await kraken.fetchNewTrades();
       server.broadcast('state', server.getFullState());
     } catch (e) {
       console.error('[SCHEDULER] Trades sync error:', e.message);
