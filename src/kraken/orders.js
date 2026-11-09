@@ -252,8 +252,6 @@ async function editOrder(orderId, pair, newPrice) {
 }
 
 async function cancelOrder(orderId) {
-  const blocked = assertLiveTradingEnabled('cancelOrder');
-  if (blocked) return blocked;
   const { getClient } = require('./api');
   
   return new Promise((resolve) => {
