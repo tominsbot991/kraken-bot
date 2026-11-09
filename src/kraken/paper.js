@@ -8,9 +8,13 @@ const path = require('path');
 const { state, DATA_DIR, log } = require('../state');
 
 const FILE = path.join(DATA_DIR, 'paper_trading.json');
-const FEE_RATE = Math.max(0, Number(process.env.PAPER_FEE_RATE ?? 0.0026));
-const SLIPPAGE_BPS = Math.max(0, Number(process.env.PAPER_SLIPPAGE_BPS ?? 5));
-const INITIAL_EUR = Math.max(0, Number(process.env.PAPER_INITIAL_EUR ?? 1000));
+function envNumber(name, fallback) {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) ? value : fallback;
+}
+const FEE_RATE = Math.min(0.1, Math.max(0, envNumber('PAPER_FEE_RATE', 0.0026)));
+const SLIPPAGE_BPS = Math.min(500, Math.max(0, envNumber('PAPER_SLIPPAGE_BPS', 5)));
+const INITIAL_EUR = Math.max(1, envNumber('PAPER_INITIAL_EUR', 1000));
 
 let book = null;
 
@@ -99,6 +103,9 @@ function marketPrice(pair, side) {
 function reservedVolume(asset) {
   return Object.values(book.orders).filter(o => o.asset === asset && o.type === 'sell').reduce((s, o) => s + o.volume, 0);
 }
+function reservedCash() {
+  return Object.values(book.orders).filter(o => o.type === 'buy').reduce((s, o) => s + o.volume * o.price * (1 + FEE_RATE), 0);
+}
 function recordTrade(pair, type, volume, price) {
   const gross = volume * price;
   const fee = gross * FEE_RATE;
@@ -115,7 +122,7 @@ function buy(pair, amountEUR, priceOverride = null) {
   const { asset } = getPairInfo(pair);
   const price = priceOverride || marketPrice(pair, 'buy');
   if (!(price > 0)) return { success: false, error: 'no_price_data' };
-  if (!(amountEUR > 0) || amountEUR > book.cashEUR + 1e-8) return { success: false, error: 'insufficient_paper_cash' };
+  if (!(amountEUR > 0) || amountEUR + reservedCash() > book.cashEUR + 1e-8) return { success: false, error: 'insufficient_paper_cash' };
   const gross = amountEUR / (1 + FEE_RATE);
   const fee = amountEUR - gross;
   const volume = gross / price;
@@ -148,10 +155,12 @@ function addPending(pair, type, ordertype, volume, price) {
   init();
   const { asset } = getPairInfo(pair);
   if (!(volume > 0) || !(price > 0)) return { success: false, error: 'invalid_order_parameters' };
+  const minimum = Number(getPairInfo(pair).info.ordermin || 0);
+  if (volume < minimum) return { success: false, error: 'below_minimum_order_volume' };
   if (type === 'sell' && volume > (book.holdings[asset] || 0) - reservedVolume(asset) + 1e-10) {
     return { success: false, error: 'insufficient_paper_asset' };
   }
-  if (type === 'buy' && volume * price * (1 + FEE_RATE) > book.cashEUR + 1e-8) {
+  if (type === 'buy' && volume * price * (1 + FEE_RATE) + reservedCash() > book.cashEUR + 1e-8) {
     return { success: false, error: 'insufficient_paper_cash' };
   }
   const id = 'PAPER-ORDER-' + book.nextId++;
@@ -203,7 +212,7 @@ function processOpenOrders() {
       if (!result.success) log('[PAPER] Simulated sell order failed to fill: ' + result.error);
     } else {
       const cost = o.volume * fillPrice * (1 + FEE_RATE);
-      if (cost <= book.cashEUR + 1e-8) {
+      if (cost + reservedCash() <= book.cashEUR + 1e-8) {
         book.cashEUR -= cost;
         book.holdings[o.asset] = (book.holdings[o.asset] || 0) + o.volume;
         recordTrade(o.pair, 'buy', o.volume, fillPrice);
