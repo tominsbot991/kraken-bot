@@ -72,6 +72,7 @@ async function fetchTicker() {
         };
       }
       
+      if (process.env.PAPER_TRADING === 'true') require('./paper').processOpenOrders();
       resolve(state.ticker);
     });
   });
