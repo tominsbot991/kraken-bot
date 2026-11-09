@@ -1,0 +1,34 @@
+[Unit]
+Description=Kraken Bot (Paper Trading)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=krakenbot
+Group=krakenbot
+WorkingDirectory=/opt/kraken-bot
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=8000
+Environment=PAPER_TRADING=true
+EnvironmentFile=-/etc/kraken-bot/kraken-bot.env
+ExecStart=/usr/bin/node /opt/kraken-bot/index.js
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+ReadWritePaths=/opt/kraken-bot/data
+
+[Install]
+WantedBy=multi-user.target
