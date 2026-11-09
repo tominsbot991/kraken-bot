@@ -8,6 +8,7 @@ const { waitForRateLimit, api } = require('./api');
 const { findPairForAsset, getAssetFromPair, getAssetDisplayName } = require('./pairs');
 
 async function fetchBalance() {
+  if (process.env.PAPER_TRADING === 'true') return require('./paper').refreshPortfolio();
   await waitForRateLimit(1);
   
   return new Promise((resolve) => {
