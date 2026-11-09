@@ -555,6 +555,8 @@ function getFullState() {
     // Balances
     balance: state.tradeBalance,
     wallet: state.wallet,
+    tradingMode: process.env.PAPER_TRADING === 'true' ? 'PAPER' : 'LIVE',
+    paperTrading: state.paperTrading || null,
     
     // Market
     ticker: tickerWithDisplayNames,
