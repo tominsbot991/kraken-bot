@@ -17,6 +17,7 @@ function assertLiveTradingEnabled(operation) {
 }
 
 async function fetchOrders(retries = 2) {
+  if (process.env.PAPER_TRADING === 'true') return require('./paper').fetchOrders();
   await waitForRateLimit(1);
   
   return new Promise((resolve) => {
@@ -39,6 +40,7 @@ async function fetchOrders(retries = 2) {
 }
 
 async function limitBuy(pair, amountEUR, price) {
+  if (process.env.PAPER_TRADING === 'true') return require('./paper').limitBuy(pair, amountEUR, price);
   const blocked = assertLiveTradingEnabled('limitBuy');
   if (blocked) return blocked;
   const { getClient } = require('./api');
@@ -78,6 +80,7 @@ async function limitBuy(pair, amountEUR, price) {
 }
 
 async function limitSell(pair, volume, price) {
+  if (process.env.PAPER_TRADING === 'true') return require('./paper').limitSell(pair, volume, price);
   const blocked = assertLiveTradingEnabled('limitSell');
   if (blocked) return blocked;
   const { getClient } = require('./api');
@@ -111,6 +114,7 @@ async function limitSell(pair, volume, price) {
 }
 
 async function marketBuy(pair, amountEUR) {
+  if (process.env.PAPER_TRADING === 'true') return require('./paper').marketBuy(pair, amountEUR);
   const blocked = assertLiveTradingEnabled('marketBuy');
   if (blocked) return blocked;
   const { getClient } = require('./api');
@@ -156,6 +160,7 @@ async function marketBuy(pair, amountEUR) {
 }
 
 async function marketSell(pair, volume) {
+  if (process.env.PAPER_TRADING === 'true') return require('./paper').marketSell(pair, volume);
   const blocked = assertLiveTradingEnabled('marketSell');
   if (blocked) return blocked;
   const { getClient } = require('./api');
@@ -186,6 +191,7 @@ async function marketSell(pair, volume) {
 }
 
 async function stopLoss(pair, volume, triggerPrice) {
+  if (process.env.PAPER_TRADING === 'true') return require('./paper').stopLoss(pair, volume, triggerPrice);
   const blocked = assertLiveTradingEnabled('stopLoss');
   if (blocked) return blocked;
   const { getClient } = require('./api');
@@ -219,6 +225,7 @@ async function stopLoss(pair, volume, triggerPrice) {
 }
 
 async function editOrder(orderId, pair, newPrice) {
+  if (process.env.PAPER_TRADING === 'true') return require('./paper').editOrder(orderId, pair, newPrice);
   const blocked = assertLiveTradingEnabled('editOrder');
   if (blocked) return blocked;
   const { getClient } = require('./api');
@@ -252,6 +259,7 @@ async function editOrder(orderId, pair, newPrice) {
 }
 
 async function cancelOrder(orderId) {
+  if (process.env.PAPER_TRADING === 'true') return require('./paper').cancelOrder(orderId);
   const { getClient } = require('./api');
   
   return new Promise((resolve) => {
