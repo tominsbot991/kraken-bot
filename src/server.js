@@ -12,7 +12,10 @@ const { state, log, DATA_DIR, config, writeFileAtomic } = require('./state');
 const kraken = require('./kraken');
 const ai = require('./ai');
 
-const PORT = process.env.PORT || 8000;
+const PORT = Number(process.env.PORT || 8000);
+// Secure default: dashboard and WebSocket are reachable only from this machine.
+// Use an SSH tunnel for remote access; do not bind to 0.0.0.0 on a public VPS.
+const HOST = process.env.HOST || '127.0.0.1';
 let wss = null;
 const clients = new Set();
 
@@ -153,11 +156,7 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = url.pathname;
   
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
+  // Same-origin dashboard only. No wildcard CORS: this API controls a trading process.
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
     return res.end();
@@ -598,9 +597,8 @@ function getFullState() {
 function start() {
   setupWebSocket();
   
-  // Bind to 0.0.0.0 to accept connections from any interface (not just localhost)
-  server.listen(PORT, '0.0.0.0', () => {
-    log(`[SERVER] Running on http://0.0.0.0:${PORT}`);
+  server.listen(PORT, HOST, () => {
+    log(`[SERVER] Running on http://${HOST}:${PORT}`);
   });
   
   // Periodic state broadcasts to keep frontend responsive
