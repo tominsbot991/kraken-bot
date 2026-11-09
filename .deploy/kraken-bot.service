@@ -13,7 +13,7 @@ Environment=HOST=127.0.0.1
 Environment=PORT=8000
 Environment=PAPER_TRADING=true
 EnvironmentFile=-/etc/kraken-bot/kraken-bot.env
-ExecStart=/usr/bin/node /opt/kraken-bot/index.js
+ExecStart=/usr/bin/env PAPER_TRADING=true HOST=127.0.0.1 PORT=8000 /usr/bin/node /opt/kraken-bot/index.js
 Restart=always
 RestartSec=5
 TimeoutStopSec=30
