@@ -8,6 +8,7 @@ const { waitForRateLimit, api } = require('./api');
 const { findPairForAsset, getAssetFromPair, getAssetDisplayName } = require('./pairs');
 
 async function fetchBalance() {
+  if (process.env.PAPER_TRADING === 'true') return require('./paper').refreshPortfolio();
   await waitForRateLimit(1);
   
   return new Promise((resolve) => {
@@ -131,7 +132,8 @@ function calculateTradeAnalytics() {
     const pos = positions[asset];
     
     if (trade.type === 'buy') {
-      pos.lots.push({ price, amount, time: trade.time });
+      const effectiveBuyPrice = amount > 0 && cost > 0 ? cost / amount : price;
+      pos.lots.push({ price: effectiveBuyPrice, amount, time: trade.time });
       pos.totalBought += amount;
     } else if (trade.type === 'sell') {
       let remaining = amount;
@@ -229,7 +231,9 @@ function getEnrichedPositions() {
       time: trade.time,
       type: trade.type,
       volume: parseFloat(trade.vol),
-      price: parseFloat(trade.price)
+      price: trade.type === 'buy' && parseFloat(trade.vol) > 0 && parseFloat(trade.cost) > 0
+        ? parseFloat(trade.cost) / parseFloat(trade.vol)
+        : parseFloat(trade.price)
     });
   }
   

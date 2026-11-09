@@ -100,6 +100,11 @@ async function placeStopWithRetry(asset, pair, amount, price, priorCancelled) {
 }
 
 async function manageTrailingStops() {
+  // Do not run cancel-and-replace trailing-stop logic while live order placement is locked.
+  // Existing Kraken stop orders remain untouched; cancellation remains available separately.
+  if (process.env.PAPER_TRADING !== 'true' && process.env.LIVE_TRADING_ENABLED !== 'true') {
+    return;
+  }
   try {
     const positions = kraken.getEnrichedPositions();
     for (const [asset, p] of Object.entries(positions)) {

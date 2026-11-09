@@ -20,8 +20,8 @@ An AI-powered cryptocurrency trading bot for [Kraken](https://www.kraken.com) ex
 ## Requirements
 
 - Node.js 18+
-- Kraken account with API key (trading permissions enabled)
-- EUR balance in your Kraken account
+- Kraken account is not required for Paper Trading; public market data is used.
+- Kraken API credentials are required only if you deliberately configure live mode.
 - One of: OpenRouter API key, OpenCode Zen API key, or local Ollama instance
 
 ## Quick Start
@@ -38,10 +38,10 @@ An AI-powered cryptocurrency trading bot for [Kraken](https://www.kraken.com) ex
    cp .env.example .env
    ```
    
-   Edit `.env` with your credentials:
+   Paper Trading is enabled by default. Set a virtual balance and configure an LLM provider:
    ```env
-   KRAKEN_KEY=your-kraken-api-key
-   KRAKEN_PASSCODE=your-kraken-secret
+   PAPER_TRADING=true
+   PAPER_INITIAL_EUR=1000
    LLM_PROVIDER=opencode           # ollama | openrouter | opencode
    OPENCODE_API_KEY=oc-your-key    # or OPENROUTER_API_KEY for openrouter
    LLM_MODEL=big-pickle            # opencode model id (free during preview)
@@ -54,12 +54,29 @@ An AI-powered cryptocurrency trading bot for [Kraken](https://www.kraken.com) ex
 
 4. Open the dashboard at `http://localhost:8000`
 
+## 24/7 VPS deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the Ubuntu/Debian systemd setup, localhost-only dashboard, firewall rules, and SSH-tunnel access. The supplied service forces Paper Trading mode; it is not a live-trading service.
+
+## Paper Trading (safe default)
+
+Paper Trading is enabled by default. It uses public Kraken ticker data but stores a separate virtual wallet in `data/paper_trading.json`. Market buys and sells are simulated with configurable fees and slippage; limit and stop-loss orders remain pending until market prices reach their trigger. No Kraken private balance, trade-history, or order endpoint is used in this mode. The dashboard reports `PAPER` mode.
+
+To start with a fresh virtual account, stop the bot and remove `data/paper_trading.json`; the next start creates a new ledger using `PAPER_INITIAL_EUR`. Paper analytics and balance history are stored separately from live-account files.
+
+Live trading requires both `PAPER_TRADING=false` and `LIVE_TRADING_ENABLED=true`, plus Kraken API credentials. Do not enable live mode until the order logic and dashboard security have been reviewed. Never grant withdrawal permissions to the API key.
+
 ## Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `KRAKEN_KEY` | required | Your Kraken API key |
-| `KRAKEN_PASSCODE` | required | Your Kraken API secret |
+| `PAPER_TRADING` | `true` | Uses an isolated simulated wallet and never sends orders to Kraken. Set to `false` only for deliberate live mode |
+| `PAPER_INITIAL_EUR` | `1000` | Starting virtual cash for a new paper ledger |
+| `PAPER_FEE_RATE` | `0.0026` | Simulated fee rate (0.26%) |
+| `PAPER_SLIPPAGE_BPS` | `5` | Simulated market slippage in basis points |
+| `KRAKEN_KEY` | live mode only | Kraken API key; not needed in paper mode |
+| `KRAKEN_PASSCODE` | live mode only | Kraken API secret; not needed in paper mode |
+| `LIVE_TRADING_ENABLED` | disabled unless explicitly set | Required in addition to `PAPER_TRADING=false` to permit real order operations |
 | `LLM_PROVIDER` | `ollama` | LLM provider: `ollama`, `openrouter`, or `opencode` |
 | `OPENROUTER_API_KEY` | - | OpenRouter API key (when provider=openrouter; optional if `LLM_BASE_URL` points at a custom endpoint) |
 | `OPENCODE_API_KEY` | - | OpenCode Zen API key (when provider=opencode) |
@@ -115,7 +132,9 @@ The bot stores data in `data/`:
 - `insights.json` - AI-learned trading patterns
 - `questions.json` - AI data requests for future development
 - `llm_history.json` - Past AI decisions
-- `balance_history.json` - Portfolio value over time
+- `balance_history.json` - Live portfolio value over time
+- `paper_trading.json` - Separate virtual cash, holdings, orders, and simulated trades
+- `paper_balance_history.json` - Paper portfolio value over time
 - `cost_basis.json` - Tax lot tracking
 
 ## API Endpoints
