@@ -1,0 +1,26 @@
+name: Paper Trading Tests
+
+on:
+  push:
+    branches:
+      - main
+      - feature/paper-trading-isolated-engine
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run isolated paper-trading tests
+        run: npm test
